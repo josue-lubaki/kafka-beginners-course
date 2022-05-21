@@ -20,7 +20,7 @@ public class ConsumerDemo {
 
     private static final Logger log = LoggerFactory.getLogger(ConsumerDemo.class);
     private static final String BOOTSTRAP_SERVERS = "127.0.0.1:9092";
-    private static final String GROUP_ID = "my-first-application";
+    private static final String GROUP_ID = "my-second-application";
     private static final String TOPIC = "demo_java";
 
     public static void main(String[] args) {

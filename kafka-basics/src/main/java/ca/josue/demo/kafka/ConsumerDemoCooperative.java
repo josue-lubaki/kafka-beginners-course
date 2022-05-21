@@ -2,6 +2,7 @@ package ca.josue.demo.kafka;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -17,15 +18,15 @@ import java.util.Properties;
  * @version 1.0
  * @since 2022-05-20
  */
-public class ConsumerDemoWithShutdown {
+public class ConsumerDemoCooperative {
 
-    private static final Logger log = LoggerFactory.getLogger(ConsumerDemoWithShutdown.class);
+    private static final Logger log = LoggerFactory.getLogger(ConsumerDemoCooperative.class);
     private static final String BOOTSTRAP_SERVERS = "127.0.0.1:9092";
     private static final String GROUP_ID = "my-second-application";
     private static final String TOPIC = "demo_java";
 
     public static void main(String[] args) {
-        log.info("I am kafka Consumer with shutdown");
+        log.info("I am kafka Consumer with shutdown and using CooperativeStickyAssignor strategy");
 
         // create properties
         Properties properties = new Properties();
@@ -34,6 +35,7 @@ public class ConsumerDemoWithShutdown {
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID);
         properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        properties.setProperty(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, CooperativeStickyAssignor.class.getName());
 
         // create consumer
         KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
