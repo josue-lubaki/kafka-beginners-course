@@ -19,7 +19,7 @@ public class ProducerDemo {
     private static final Logger log = LoggerFactory.getLogger(ProducerDemo.class);
 
     public static void main(String[] args) {
-        log.info("Hello world!");
+        log.info("I am kafka Producer");
 
         // create Producer properties
         Properties properties = new Properties();
