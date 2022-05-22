@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+}
+
+group 'ca.josue.demo'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients
+    implementation group: 'org.apache.kafka', name: 'kafka-clients', version: '3.1.0'
+
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
+
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
+    implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.36'
+
+    // https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp
+    implementation group: 'com.squareup.okhttp3', name: 'okhttp', version: '4.9.3'
+
+    // https://mvnrepository.com/artifact/com.launchdarkly/okhttp-eventsource
+    implementation group: 'com.launchdarkly', name: 'okhttp-eventsource', version: '2.5.0'
+
+}
+
+test {
+    useJUnitPlatform()
+}
