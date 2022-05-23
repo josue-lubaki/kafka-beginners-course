@@ -13,8 +13,9 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.bulk.BulkRequest;
+import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.index.IndexRequest;
-import org.opensearch.action.index.IndexResponse;
 import org.opensearch.client.RequestOptions;
 import org.opensearch.client.RestClient;
 import org.opensearch.client.RestHighLevelClient;
@@ -35,80 +36,111 @@ import java.util.Properties;
  * @since 2022-05-23
  */
 public class OpenSearchConsumer {
+
+    private static final Logger log = LoggerFactory.getLogger(OpenSearchConsumer.class.getSimpleName());
+    private static final String INDEX_NAME = "wikimedia";
+    private static final String TOPIC = "wikimedia.recentchange";
+
     public static void main(String[] args) throws IOException {
 
-        Logger log = LoggerFactory.getLogger(OpenSearchConsumer.class.getSimpleName());
-        final String INDEX_NAME = "wikimedia";
-        final String TOPIC = "wikimedia.recentchange";
-
-        // create an OpenSearch Client
+        // create an OpenSearch Client and consumer Kafka Client
         RestHighLevelClient openSearchClient = createOpenSearchClient();
-
-        // create our kafka Client
         KafkaConsumer<String, String> consumer = createKafkaConsumer();
 
-        // We need to create the index on OpenSearch if it doesn't exist already
         try (openSearchClient; consumer) {
-
-            boolean indexExists = openSearchClient
-                    .indices()
-                    .exists(new GetIndexRequest(INDEX_NAME), RequestOptions.DEFAULT);
-
-            if (!indexExists) {
-                CreateIndexRequest indexRequest = new CreateIndexRequest(INDEX_NAME);
-                openSearchClient.indices().create(indexRequest, RequestOptions.DEFAULT);
-                log.info("The index " + INDEX_NAME + " was created successfully");
-            } else {
-                log.info("The index " + INDEX_NAME + " already exists");
-            }
+            // We need to create the index on OpenSearch if it doesn't exist already
+            createIndexForOpenSearchClient(openSearchClient);
 
             // subscribe to our topic
             consumer.subscribe(Collections.singleton(TOPIC));
 
-            while(true){
+            while (true) {
                 // poll for messages
                 ConsumerRecords<String, String> records =
                         consumer.poll(Duration.ofMillis(3000));
 
-                int recordCount = records.count();
-                log.info("Received " + recordCount + " records.");
+                boolean recordsAreSaved = process(openSearchClient, records);
 
-                for(ConsumerRecord<String, String> record : records){
-
-                    // strategies 1
-                    // define an ID using Kafka Record coordinates
-                    //String id = record.topic() + "_" + record.partition() + "_" + record.offset();
-
-                    try {
-                        // strategies 2
-                        // we extract the ID from the JSON value
-                        String id = extractId(record.value());
-
-                        // send the message to OpenSearch
-                        IndexRequest indexRequest =
-                                new IndexRequest(INDEX_NAME)
-                                        .source(record.value(), XContentType.JSON)
-                                        .id(id);
-
-                        IndexResponse response = openSearchClient.index(indexRequest, RequestOptions.DEFAULT);
-                        log.info("ID response : " + response.getId());
-                    } catch (Exception e){
-                        log.error("Error while sending message to OpenSearch : {}", e.getMessage());
-                    }
+                if (recordsAreSaved) {
+                    // commit offsets after the batch is consumed
+                    consumer.commitAsync();
+                    log.info("Offsets have been committed");
                 }
+            }
+        }
+    }
 
-                // commit offsets after the batch is consumed
-                consumer.commitAsync();
-                log.info("Offsets have been committed");
+    /**
+     * Function to create an Index on OpenSearch if it doesn't exist already
+     *
+     * @param openSearchClient RestHighLevelClient to create the index
+     * @throws IOException if there is an error creating the index
+     */
+    private static void createIndexForOpenSearchClient(RestHighLevelClient openSearchClient) throws IOException {
+        boolean indexExists = openSearchClient
+                .indices()
+                .exists(new GetIndexRequest(INDEX_NAME), RequestOptions.DEFAULT);
+
+        if (!indexExists) {
+            CreateIndexRequest indexRequest = new CreateIndexRequest(INDEX_NAME);
+            openSearchClient.indices().create(indexRequest, RequestOptions.DEFAULT);
+            log.info("The index " + INDEX_NAME + " was created successfully");
+        } else {
+            log.info("The index " + INDEX_NAME + " already exists");
+        }
+    }
+
+    /**
+     * Function to process the messages received from Kafka and send them to OpenSearch
+     * by creating a BulkRequest and sending it to OpenSearch
+     *
+     * @param openSearchClient RestHighLevelClient to send the BulkRequest to OpenSearch
+     * @param records          ConsumerRecords to process and send to OpenSearch
+     * @throws IOException if there is an error sending the BulkRequest to OpenSearch
+     */
+    private static boolean process(RestHighLevelClient openSearchClient, ConsumerRecords<String, String> records) throws IOException {
+        int recordCount = records.count();
+        log.info("Received " + recordCount + " records.");
+
+        // create the bulkRequest for the collection of records
+        BulkRequest bulkRequest = new BulkRequest();
+
+        for (ConsumerRecord<String, String> record : records) {
+            try {
+                // we extract the ID from the JSON value
+                String id = extractId(record.value());
+
+                // send the message to OpenSearch
+                IndexRequest indexRequest =
+                        new IndexRequest(INDEX_NAME)
+                                .source(record.value(), XContentType.JSON)
+                                .id(id);
+
+                // add the index request to the bulk request
+                bulkRequest.add(indexRequest);
+
+            } catch (Exception e) {
+                log.error("Error while sending message to OpenSearch : {}", e.getMessage());
             }
         }
 
-        // main code logic
+        // insert the bulk request into the OpenSearch client
+        if (bulkRequest.numberOfActions() > 0) {
+            BulkResponse bulkResponse = openSearchClient.bulk(bulkRequest, RequestOptions.DEFAULT);
+            log.info("Inserted {} records.", bulkResponse.getItems().length);
+            return true;
+        }
 
-        // close things
-        //openSearchClient.close();
+        return false;
     }
 
+    /**
+     * Function to extract the ID from the JSON value
+     * meta JSON contains the id property
+     *
+     * @param json the JSON value to extract the ID
+     * @return the ID
+     */
     private static String extractId(String json) {
         // gson library
         return JsonParser.parseString(json)
@@ -121,6 +153,7 @@ public class OpenSearchConsumer {
 
     /**
      * Function to create a openSearch client
+     *
      * @return RestHighLevelClient
      **/
     private static RestHighLevelClient createOpenSearchClient() {
@@ -147,8 +180,7 @@ public class OpenSearchConsumer {
                             )
                     )
             );
-        }
-        else {
+        } else {
             String[] auth = userInfo.split(":");
 
             CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
@@ -179,6 +211,7 @@ public class OpenSearchConsumer {
 
     /**
      * Function to create a kafka consumer
+     *
      * @return KafkaConsumer<String, String>
      **/
     private static KafkaConsumer<String, String> createKafkaConsumer() {
