@@ -93,9 +93,13 @@ public class OpenSearchConsumer {
                         IndexResponse response = openSearchClient.index(indexRequest, RequestOptions.DEFAULT);
                         log.info("ID response : " + response.getId());
                     } catch (Exception e){
-                        log.error("Error while sending message to OpenSearch", e);
+                        log.error("Error while sending message to OpenSearch : {}", e.getMessage());
                     }
                 }
+
+                // commit offsets after the batch is consumed
+                consumer.commitAsync();
+                log.info("Offsets have been committed");
             }
         }
 
@@ -188,6 +192,7 @@ public class OpenSearchConsumer {
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, GROUP_ID);
         properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
 
         // create consumer
         return new KafkaConsumer<>(properties);
