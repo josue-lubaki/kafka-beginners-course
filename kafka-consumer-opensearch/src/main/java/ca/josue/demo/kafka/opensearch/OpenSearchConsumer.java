@@ -1,5 +1,6 @@
 package ca.josue.demo.kafka.opensearch;
 
+import com.google.gson.JsonParser;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -73,11 +74,21 @@ public class OpenSearchConsumer {
                 log.info("Received " + recordCount + " records.");
 
                 for(ConsumerRecord<String, String> record : records){
-                    try{
+
+                    // strategies 1
+                    // define an ID using Kafka Record coordinates
+                    //String id = record.topic() + "_" + record.partition() + "_" + record.offset();
+
+                    try {
+                        // strategies 2
+                        // we extract the ID from the JSON value
+                        String id = extractId(record.value());
+
                         // send the message to OpenSearch
                         IndexRequest indexRequest =
                                 new IndexRequest(INDEX_NAME)
-                                        .source(record.value(), XContentType.JSON);
+                                        .source(record.value(), XContentType.JSON)
+                                        .id(id);
 
                         IndexResponse response = openSearchClient.index(indexRequest, RequestOptions.DEFAULT);
                         log.info("ID response : " + response.getId());
@@ -92,6 +103,16 @@ public class OpenSearchConsumer {
 
         // close things
         //openSearchClient.close();
+    }
+
+    private static String extractId(String json) {
+        // gson library
+        return JsonParser.parseString(json)
+                .getAsJsonObject()
+                .get("meta")
+                .getAsJsonObject()
+                .get("id")
+                .getAsString();
     }
 
     /**
