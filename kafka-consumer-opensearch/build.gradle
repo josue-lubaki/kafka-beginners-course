@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+}
+
+group 'ca.josue.demo'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients
+    implementation group: 'org.apache.kafka', name: 'kafka-clients', version: '3.1.0'
+
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
+
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
+    implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.36'
+
+    // https://search.maven.org/artifact/org.opensearch.client/opensearch-rest-high-level-client/1.2.4/jar
+    implementation 'org.opensearch.client:opensearch-rest-high-level-client:1.2.4'
+
+    // https://search.maven.org/artifact/com.google.code.gson/gson/2.9.0/jar
+    implementation 'com.google.code.gson:gson:2.9.0'
+
+}
+
+test {
+    useJUnitPlatform()
+}

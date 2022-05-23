@@ -13,6 +13,7 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/Kafka-producer-wikimedia" />
             <option value="$PROJECT_DIR$/kafka-basics" />
+            <option value="$PROJECT_DIR$/kafka-consumer-opensearch" />
           </set>
         </option>
       </GradleProjectSettings>
