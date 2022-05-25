@@ -35,21 +35,21 @@ public class ConsumerDemo {
         properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
         // create consumer
-        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
+        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties)) {
+            // Subscribe consumer to our topic
+            consumer.subscribe(List.of(TOPIC));
 
-        // Subscribe consumer to our topic
-        consumer.subscribe(List.of(TOPIC));
+            // poll for messages
+            while (true) {
+                log.info("POLLING...");
+                ConsumerRecords<String, String> records =
+                        consumer.poll(Duration.ofMillis(1000));
 
-        // poll for messages
-        while (true) {
-            log.info("POLLING...");
-            ConsumerRecords<String, String> records =
-                    consumer.poll(Duration.ofMillis(1000));
-
-            records.forEach((record) -> {
-                log.info("Key : " + record.key() + " \nvalue : " + record.value());
-                log.info("Partition : " + record.partition() + " \nOffset : " + record.offset());
-            });
+                records.forEach((record) -> {
+                    log.info("Key : " + record.key() + " \nvalue : " + record.value());
+                    log.info("Partition : " + record.partition() + " \nOffset : " + record.offset());
+                });
+            }
         }
 
     }

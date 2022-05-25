@@ -35,36 +35,36 @@ public class ConsumerDemoAssignSeek {
         properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         // create consumer
-        KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(properties);
+        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(properties)) {
+            // assign
+            TopicPartition partitionToReadFrom = new TopicPartition(topic, 0);
+            consumer.assign(List.of(partitionToReadFrom));
 
-        // assign and seek are mostly used to replay data or fetch a specific message
+            // seek
+            long offsetToReadFrom = 7L;
+            consumer.seek(partitionToReadFrom, offsetToReadFrom);
 
-        // assign
-        TopicPartition partitionToReadFrom = new TopicPartition(topic, 0);
-        consumer.assign(List.of(partitionToReadFrom));
+            int numberOfMessagesToRead = 20;
+            boolean keepOnReading = true;
+            int numberOfMessagesReadSoFar = 0;
 
-        // seek
-        long offsetToReadFrom = 7L;
-        consumer.seek(partitionToReadFrom, offsetToReadFrom);
+            while(keepOnReading){
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
 
-        int numberOfMessagesToRead = 20;
-        boolean keepOnReading = true;
-        int numberOfMessagesReadSoFar = 0;
+                for(ConsumerRecord<String, String> record : records){
+                    numberOfMessagesReadSoFar += 1;
+                    log.info("Key: " + record.key() + ", Value: " + record.value());
+                    log.info("Partition: " + record.partition() + ", Offset:" + record.offset());
 
-        while(keepOnReading){
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-
-            for(ConsumerRecord<String, String> record : records){
-                numberOfMessagesReadSoFar += 1;
-                log.info("Key: " + record.key() + ", Value: " + record.value());
-                log.info("Partition: " + record.partition() + ", Offset:" + record.offset());
-
-                if (numberOfMessagesReadSoFar >= numberOfMessagesToRead){
-                    keepOnReading = false; // to exit the while loop
-                    break; // to exit the for loop
+                    if (numberOfMessagesReadSoFar >= numberOfMessagesToRead){
+                        keepOnReading = false; // to exit the while loop
+                        break; // to exit the for loop
+                    }
                 }
             }
         }
+
+        // assign and seek are mostly used to replay data or fetch a specific message
 
         log.info("Exiting the application");
     }
