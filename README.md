@@ -62,7 +62,7 @@ targetPartition = Math.abs(Utils.murmur2(keyBytes)) % (numPartition - 1)
     <li>A kafka cluster is composed of multiple brokers (servers) - ils reçoivent et envoient des données</li>
     <li>Each broker is identified with its ID (integer)</li>
     <li>Each broker contains certain topic partitions</li>
-    <li>il n'est pas important de connaître tous les brokers du cluster, il suffit juste de se connaître comment se connscter à un broker et les clients se connecteront automatiquement aux autres.</li>
+    <li>il n'est pas important de connaître tous les brokers du cluster, il suffit juste de se connaître comment se connecter à un broker et les clients se connecteront automatiquement aux autres.</li>
     <li>Each broker knows about all brokers, topics and partitions (metadata)</li>
 </ul>
 
